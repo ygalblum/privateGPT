@@ -149,6 +149,14 @@ class EmbeddingSettings(BaseModel):
             "Do not set it higher than your number of threads of your CPU."
         ),
     )
+    ingest_source: Literal["local", "gdrive"] = Field(
+        "local",
+        description=(
+            "The localtion of the source files to use for the embedding engine:\n"
+            "if `local` - ingest files from a the local storage.\n"
+            "if `gdrive` - ingest files from a Google Drive folder.\n"
+        )
+    )
 
 
 class SagemakerSettings(BaseModel):
@@ -245,6 +253,21 @@ class QdrantSettings(BaseModel):
     )
 
 
+class GDriveSettings(BaseModel):
+    service_account_key: str | None = Field(
+        None,
+        description="Path for the Google service account JSON file"
+    )
+    load_trashed_files: bool | None = Field(
+        False,
+        description="Ingest files marked as trash"
+    )
+    recursive: bool | None = Field(
+        False,
+        description="Ingest directories recursively"
+    )
+
+
 class Settings(BaseModel):
     server: ServerSettings
     data: DataSettings
@@ -256,6 +279,7 @@ class Settings(BaseModel):
     openai: OpenAISettings
     ollama: OllamaSettings
     vectorstore: VectorstoreSettings
+    gdrive: GDriveSettings
     qdrant: QdrantSettings | None = None
 
 

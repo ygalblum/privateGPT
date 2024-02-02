@@ -205,6 +205,10 @@ class PrivateGptUi:
         paths = [Path(file) for file in files]
         self._ingest_service.bulk_ingest([(str(path.name), path) for path in paths])
 
+    def _sync_gdrive(self, folder_id):
+        import ipdb; ipdb.set_trace(context=20)
+        pass
+
     def _build_ui_blocks(self) -> gr.Blocks:
         logger.debug("Creating the UI blocks")
         with gr.Blocks(
@@ -228,6 +232,7 @@ class PrivateGptUi:
             with gr.Row():
                 gr.HTML(f"<div class='logo'/><img src={logo_svg} alt=PrivateGPT></div")
 
+            additional_inputs = []
             with gr.Row(equal_height=False):
                 with gr.Column(scale=3):
                     mode = gr.Radio(
@@ -235,29 +240,42 @@ class PrivateGptUi:
                         label="Mode",
                         value="Query Docs",
                     )
-                    upload_button = gr.components.UploadButton(
-                        "Upload File(s)",
-                        type="filepath",
-                        file_count="multiple",
-                        size="sm",
-                    )
-                    ingested_dataset = gr.List(
-                        self._list_ingested_files,
-                        headers=["File name"],
-                        label="Ingested Files",
-                        interactive=False,
-                        render=False,  # Rendered under the button
-                    )
-                    upload_button.upload(
-                        self._upload_file,
-                        inputs=upload_button,
-                        outputs=ingested_dataset,
-                    )
-                    ingested_dataset.change(
-                        self._list_ingested_files,
-                        outputs=ingested_dataset,
-                    )
-                    ingested_dataset.render()
+                    additional_inputs.append(mode)
+                    match settings().embedding.ingest_source:
+                        case "gdrive":
+                            gdrive_folder_id_input = gr.Textbox(label="GDrive Folder ID")
+
+                            ingest_button = gr.Button("Ingest from Google Drive")
+                            ingest_button.click(
+                                self._sync_gdrive,
+                                inputs=gdrive_folder_id_input
+                            )
+                            additional_inputs.append(ingest_button)
+                        case _:
+                            upload_button = gr.components.UploadButton(
+                                "Upload File(s)",
+                                type="filepath",
+                                file_count="multiple",
+                                size="sm",
+                            )
+                            ingested_dataset = gr.List(
+                                self._list_ingested_files,
+                                headers=["File name"],
+                                label="Ingested Files",
+                                interactive=False,
+                                render=False,  # Rendered under the button
+                            )
+                            upload_button.upload(
+                                self._upload_file,
+                                inputs=upload_button,
+                                outputs=ingested_dataset,
+                            )
+                            ingested_dataset.change(
+                                self._list_ingested_files,
+                                outputs=ingested_dataset,
+                            )
+                            ingested_dataset.render()
+                            additional_inputs.append(upload_button)
                     system_prompt_input = gr.Textbox(
                         placeholder=self._system_prompt,
                         label="System Prompt",
@@ -265,6 +283,7 @@ class PrivateGptUi:
                         interactive=True,
                         render=False,
                     )
+                    additional_inputs.append(system_prompt_input)
                     # When mode changes, set default system prompt
                     mode.change(
                         self._set_current_mode, inputs=mode, outputs=system_prompt_input
@@ -288,7 +307,7 @@ class PrivateGptUi:
                                 AVATAR_BOT,
                             ),
                         ),
-                        additional_inputs=[mode, upload_button, system_prompt_input],
+                        additional_inputs=additional_inputs,
                     )
         return blocks
 

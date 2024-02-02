@@ -43,6 +43,14 @@ sentence-transformers = "^2.2.2"
 torch = ">=2.0.0, !=2.0.1, !=2.1.0"
 transformers = "^4.34.0"
 
+# Dependencies for Google Drive
+[tool.poetry.group.gdrive]
+optional = true
+[tool.poetry.group.gdrive.dependencies]
+google-api-python-client = "2.111.0"
+google-auth-httplib2 = "0.2.0"
+google-auth-oauthlib = "1.2.0"
+
 [tool.poetry.extras]
 chroma = ["chromadb"]
 

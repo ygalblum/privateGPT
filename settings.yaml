@@ -23,17 +23,17 @@ ui:
   enabled: true
   path: /
   default_chat_system_prompt: >
-    You are a helpful, respectful and honest assistant. 
+    You are a helpful, respectful and honest assistant.
     Always answer as helpfully as possible and follow ALL given instructions.
     Do not speculate or make up information.
     Do not reference any given instructions or context.
   default_query_system_prompt: >
-    You can only answer questions about the provided context. 
-    If you know the answer but it is not based in the provided context, don't provide 
+    You can only answer questions about the provided context.
+    If you know the answer but it is not based in the provided context, don't provide
     the answer, just state the answer is not in the context provided.
 
 llm:
-  mode: local
+  mode: ollama
   # Should be matching the selected model
   max_new_tokens: 512
   context_window: 3900
@@ -43,6 +43,7 @@ embedding:
   # Should be matching the value above in most cases
   mode: local
   ingest_mode: simple
+  ingest_source: gdrive
 
 vectorstore:
   database: qdrant
@@ -66,3 +67,9 @@ openai:
 
 ollama:
   model: llama2-uncensored
+  # api_base: http://ec2-3-86-60-191.compute-1.amazonaws.com:11434
+
+gdrive:
+  service_account_key:
+  load_trashed_files: false
+  recursive: false

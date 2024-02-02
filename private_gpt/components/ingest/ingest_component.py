@@ -20,6 +20,7 @@ from llama_index.indices.base import BaseIndex
 from llama_index.ingestion import run_transformations
 
 from private_gpt.components.ingest.ingest_helper import IngestionHelper
+from private_gpt.components.ingest.gdrive_ingest_helper import GDriveIngestHelper
 from private_gpt.paths import local_data_path
 from private_gpt.settings.settings import Settings
 
@@ -309,20 +310,65 @@ class ParallelizedIngestComponent(BaseIngestComponentWithIndex):
         self._file_to_documents_work_pool.terminate()
 
 
+class GoogleDriveIngestComponent(BaseIngestComponentWithIndex):
+    def __init__(
+        self,
+        storage_context: StorageContext,
+        service_context: ServiceContext,
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(storage_context, service_context, *args, **kwargs)
+
+    def ingest(self, folder_id: str) -> list[Document]:
+        logger.info("Ingesting Google Drive folder=%s", folder_id)
+        documents = GDriveIngestHelper.transform_into_documents(folder_id)
+        logger.info(
+            "Transformed folder=%s into count=%s documents", folder_id, len(documents)
+        )
+        logger.debug("Saving the documents in the index and doc store")
+        return self._save_docs(documents)
+
+    def bulk_ingest(self, folder_ids: list[str]) -> list[Document]:
+        saved_documents = []
+        for folder_id in folder_ids:
+            documents = GDriveIngestHelper.transform_into_documents(folder_id)
+            saved_documents.extend(self._save_docs(documents))
+        return saved_documents
+
+    def _save_docs(self, documents: list[Document]) -> list[Document]:
+        logger.debug("Transforming count=%s documents into nodes", len(documents))
+        with self._index_thread_lock:
+            for document in documents:
+                self._index.insert(document, show_progress=True)
+            logger.debug("Persisting the index and nodes")
+            # persist the index and nodes
+            self._save_index()
+            logger.debug("Persisted the index and nodes")
+        return documents
+
+
 def get_ingestion_component(
     storage_context: StorageContext,
     service_context: ServiceContext,
     settings: Settings,
 ) -> BaseIngestComponent:
     """Get the ingestion component for the given configuration."""
-    ingest_mode = settings.embedding.ingest_mode
-    if ingest_mode == "batch":
-        return BatchIngestComponent(
-            storage_context, service_context, settings.embedding.count_workers
-        )
-    elif ingest_mode == "parallel":
-        return ParallelizedIngestComponent(
-            storage_context, service_context, settings.embedding.count_workers
-        )
-    else:
-        return SimpleIngestComponent(storage_context, service_context)
+    ingest_source = settings.embedding.ingest_source
+    match ingest_source:
+        case "gdrive":
+            return GoogleDriveIngestComponent(storage_context, service_context)
+        # Use catch all wildcard instead of local to avoid failures
+        case _:
+            ingest_mode = settings.embedding.ingest_mode
+            match ingest_mode:
+                case "batch":
+                    return BatchIngestComponent(
+                        storage_context, service_context, settings.embedding.count_workers
+                    )
+                case "parallel":
+                    return ParallelizedIngestComponent(
+                        storage_context, service_context, settings.embedding.count_workers
+                    )
+                case _:
+                    return SimpleIngestComponent(storage_context, service_context)

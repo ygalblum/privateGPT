@@ -93,6 +93,9 @@ class IngestService:
         logger.info("Finished ingestion file_name=%s", [f[0] for f in files])
         return [IngestedDoc.from_document(document) for document in documents]
 
+    def gdrive_ingest(self, folder_id: str) -> list[IngestedDoc]:
+        pass
+
     def list_ingested(self) -> list[IngestedDoc]:
         ingested_docs = []
         try:
